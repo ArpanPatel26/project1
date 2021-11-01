@@ -19,72 +19,214 @@ tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
 
 ## Data Wrangling, Exploration, Visualization
 
-### Name and EID here
+### Arpan Patel, adp2999
 
 #### Introduction 
 
-Paragraph or two introducing your datasets and variables, why they are interesting to you, etc.
+Hello.. For this project, I have decided to compare my Amazon order data with the S&P 500, year to date. I think it will interesting comparing patterns among the two datasets. The 'AMZM_orders' dataset contains the variables: Order Date, Order ID, Account Group, Order Quantity, Order Subtotal, Order Tax, Order Net Total, Amazon-Internal Product Category, ASIN, Title, UNSPSC, Brand, Manufacturer, Seller Name, and Seller State. The 'SP500' dataset contains the variables: Date, Open, High, Low, Close, Adj Close, and Volume. The idea is to compare frequency of orders with several S&P indicators such as opening value, closing value, and volume. Some other interesting comparisons may come up as I complete the project. The common ID variable that I will be using is the date. The Amazon order data was acquired by selecting and downloading the data from the privacy section of my account. The S&P 500 year to date data was acquired from Yahoo Finance. I expect to find a positive relationship between the % change on the day and my amazon order history. More specifically, I expect to find that I spend more on Amazon on days that the S&P has a higher percent change (a green day). 
+
 
 ```{R}
 # read your datasets in here, e.g., with read_csv()
+library(tidyverse)
+AMZM_orders <- read_csv("/stor/home/adp2999/project1/AMZM_orders.csv", 
+     col_types = cols(`Order Date` = col_date(format = "%m/%d/%Y"), 
+         `Order Quantity` = col_integer(), 
+         `Order Subtotal` = col_number(), 
+         `Order Tax` = col_number(), `Order Net Total` = col_number(), 
+         UNSPSC = col_integer()))
+SP500 <- read_csv("/stor/home/adp2999/project1/SP500.csv", col_types = cols(Date = col_date(format = "%b %d, %Y"), 
+     Open = col_number(), High = col_number(), 
+     Low = col_number(), `Close*` = col_number(), 
+    `Adj Close**` = col_number(), Volume = col_number()))
+
+head(AMZM_orders)
+head(SP500)
 
 ```
+
+Here I formatted the data column in both datasets into a common format so when I join the datasets, the join process will be seamless. I also used the import dataset function on R to changed the class of variables ahead of time. Finally, I outputted the datasets so you can see what the raw data looks like. In short, the 'AMZM_orders' has 217 observations of 16 variables. The 'SP500' dataset has 209 observations of 7 variables. 
+
 
 #### Tidying: Reshaping
 
 If your datasets are tidy already, demonstrate that you can reshape data with pivot wider/longer here (e.g., untidy and then retidy). Alternatively, it may be easier to wait until the wrangling section so you can reshape your summary statistics. Note here if you are going to do this.
 
 ```{R}
-# your tidying code (if applicable; can also wait until wrangling section)
+#your tidying code.
+#Here I deleted all observations that had an NA and renamed "Order Date" to "Date" for a common ID between the two data sets. 
+AMZM_orders <- rename(AMZM_orders, Date = "Order Date")
+SP500 <- rename(SP500, Close = "Close*")
+head(AMZM_orders)
+head(SP500)
+#I will tidy data after wrangling section.
+AMZM_orders2 <- AMZM_orders %>% pivot_wider(names_from = `Amazon-Internal Product Category`, values_from = "Brand")
+AMZM_orders3 <- AMZM_orders2 %>% pivot_longer(15:43, names_to="Amazon-Internal Product Category", values_to="Brand")
 ```
 
-    
+Since my datasets were already tidy, I will use the required functions in the wrangling section. I used this section of the project to rename the variable "Order Date" to "Date" so both datasets can have a common ID of "Date". I did not need to clean my data by using na.omit() because neither dataset had any NAs in rows of interest.
+
+ 
 #### Joining/Merging
 
 ```{R}
 # your joining code
-
+data1 <- right_join(AMZM_orders, SP500, by="Date")
+head(data1)
 # your joining code
+compare <- anti_join(AMZM_orders,SP500)
+head(compare)
+count(compare)
+compare2 <- anti_join(SP500,AMZM_orders)
+head(compare2)
+count(compare2)
 ```
 
-Discussions of joining here. Feel encouraged to break up into more than once code chunk and discuss each in turn.
+Since I want to compare Amazon orders to the S&P 500, I need to do a right join where I keep all the rows from 'SP500' and only add rows with matches from 'AMZM_orders'. This way the rows in 'SP500' with no match in 'AMZM_orders' will have NAs in the new columns. In other words, I can compare the percent change of the S&P on every day, year to date, to my Amazon order history, even on days where I did not order anything.  
+
+Before the join, the 'AMZM_orders' dataset had 217 observations of 16 variables (15 of which were unique). In addition, the 'SP500' dataset had 209 observations of 7 variables (6 of which were unique). The only common ID/variable was 'Date'. The IDs that were unique to 'AMZM_orders' are Order ID, Account Group, Order Quantity, Order Subtotal, Order Tax, Order Net Total, Amazon-Internal Product Category, ASIN, Title, UNSPSC, Brand, Manufacturer, Seller Name, and Seller State. The IDs that were unique to 'SP500' are Open, High, Low, Close, Adj Close, and Volume. After the right join, the resulting 'data1' had 290 observations of 22 variables. In theory, after a right-join, the result should have the same number of rows as 'SP500' (209 rows). However, the resulting 'data1' has 290 rows. This is because there are multiple Amazon orders on the same day. This results in 'SP500' data being copied multiple times during the join. To be exact, there were 81 times in which I ordered multiple items on the same day. From the anti-join code, there are 54 observations in 'AMZM_orders' that have no match in 'SP500'. There are also 127 observations in the 'SP500' dataset that have no match in 'AMZM_orders'. 
+
+It is important to note the size of the joined dataset, 'data1'. 'data1' has 290 observations of 22 variables. In terms of observations, this is bigger than the number of observations in the original datasets, as discussed above. In terms of variables, the 'data1' has more variables because it is simply the combination of both datasets. Besides the common variable, each distinct variable from both datasets were joined together into 'data1'. There were no observations dropped from either dataset. This reduces potential problems as a significant amount of the data is being used to determine the relationship among the variables. 
+
 
 ####  Wrangling
 
 ```{R}
-# your wrangling code
-
-# your wrangling code
-
-# your wrangling code
+# your mutate code
+data2 <- data1
+data2<-data2 %>% mutate(day_change= Close-Open)
+data2 <- data2 %>% mutate(percent_day_change= ((day_change)/(Open))*100)
 ```
 
-Your discussion of wrangling section here. Feel encouraged to break up into more than once code chunk and discuss each in turn.
+First, I made a copy of 'data1' and called it 'data2' in case I mess up the mutate() function. My first mutate function, I calculated the day change by subtracting the closing value with the opening value. However, I realized a better metric for the S&P 500 would be percent day change. So I used mutate again to create this variable. 
+
+```{R}
+# your filter code
+data2$`Order Quantity`[is.na(data2$`Order Quantity`)] <- 0
+data2 %>% filter(`Order Quantity` == "0", percent_day_change<0)
+```
+
+Next, I converted all of the NAs for Order Quantity into 0. This is because the days in which I did not place an order, my data had NA for the order quantity. It makes more sense to make this 0. Now I can use the filter function to how many days had a negative percent change in the S&P500 and had 0 Amazon orders. As you can see above, this happened for 61 days. Out of the 209 days that I collected data on, 29.19% of those days were both negative percent change and 0 Amazon orders.
+
+```{R}
+# your select and arrange code
+data2 %>% select(`Order Net Total`,`Amazon-Internal Product Category`)%>% arrange(desc(`Order Net Total`))
+```
+Next, I selected the order net total and amazon internal product category variables to observe its relationship. I arranged the data in descending order of 'Order Net Total'. Now I can compare the order net totals to the Amazon-Internal Product Category to see which product category I spend the most money on individually. From the data above, we can observe that majority of my top 25 most expensive purchases are in the Personal Computer Category. 
+
+
+```{R}
+# your wrangling code
+data2 %>% filter(`Order Quantity`>1) %>% select(`Order Quantity`,`Order Net Total`, `Amazon-Internal Product Category`,`Seller State`) %>% arrange(desc(`Order Net Total`))
+```
+
+In this wrangle, I wanted to see several things. First, I wanted to see where the most expensive items I was buying was coming from. As you can see from the chart above, the top 3 most expensive items I have bought year to date are from Guangdong, China. I also wanted to see what type of items I am buying in quantities higher than 1. From the data above, we can see that personal computer is still the highest price and quantity category. This makes sense because I purchase several laptops a week for my business. 
+
+
+
+
+```{R}
+# your summarize/group-by code
+data2 %>% group_by(`Amazon-Internal Product Category`) %>% summarize(`average_day_change`=mean(day_change, na.rm=T), n()) %>% arrange(average_day_change)
+```
+From this code, I am able to compare the average day change of the S&P500 to each category of items I bought on Amazon. We can observe that I tend to buy groceries on days in which the S&P500 have a high negative day change. We can also see that I purchase items from Prestige Beauty, Jewelry, and Toys on days in which the S&P500 have a high positive day change. This is very interesting because I did not realize that on days that I have made lots of money in the market, I tend to purchase gifts for my mom, sister, and girlfriend (Prestige Beauty and Jewelry) and on days in which I lose a lot of money in the market, I buy essentials like Groceries. 
+
+
+```{R}
+# your wrangling code
+Brand_data <- data2 %>% group_by(`Amazon-Internal Product Category`, Brand) %>% summarize(`average_order_quantity`=mean(`Order Quantity`, na.rm=T), n()) %>% arrange(desc(`average_order_quantity`))
+head(Brand_data)
+```
+
+After seeing that my top expense category was Personal Computer, I was curious what brand of electronics I was buying the most often. The code above shows the average order quantity for each brand within the internal product categories. From the data above, you can see that within Personal Computer category, the brand in which I buy the most is YELLYOUTH. This group_by() function utilizes two categorical data variables (Amazon-Internal Product Category and Brand)
+
+```{R}
+# your TIDYING code
+data3 <- data2
+data3 <- data3 %>% separate("Date",into=c("Year","Month","Day"), convert=T)
+head(data3)
+```
+
+After doing the joining and wrangling section, I decided that I needed to tidy my dataset in order to be able to filter by month and find patterns a monthly basis. Therefore, I used the separate() function to separate 'Date' into 'Year', 'Month', and 'Day'. 
+
+```{R}
+# your wrangling code
+data3 %>% filter(Month==6) %>% summarize(mean(`Order Net Total`, na.rm = T), min(`Order Net Total`, na.rm = T), max(`Order Net Total`, na.rm = T), sd(`Order Net Total`, na.rm = T), var(`Order Net Total`, na.rm = T), quantile(`Order Net Total`, na.rm = T), n_distinct(`Order Net Total`), n())
+```
+Here, I used at least 5 unique functions within summarize to gain more insight into my data. One notable analytic is the mean price of items bought in the month of June. This turned out to be $38.67.
+
+
+```{R}
+# your wrangling code
+data2 %>% mutate(Date = str_replace(Date, "2021-", ""))
+```
+
+Here is used a `stringr` function in order to remove the year from each observation. Since the whole dataset is only purchases year to date, all of them occurred in 2021. Therefore, having the year is irrelevant. 
+
+
+```{R}
+# your wrangling code
+per_million <- function(Volume) {
+    volume_per_million <- (Volume/1000000)
+    return(volume_per_million)
+}
+data3 %>% mutate(Volume = per_million(Volume))
+```
+
+
+In this chunk of code, I created my own function that converts the 'Volume' variable into volume per million. Since the numbers in this column are extremely large, I figured it would be better to look at if the numbers were per million. So that is what I did. 
+
+
+
+```{R}
+# your wrangling code
+library(knitr)
+table1 <- data2 %>% group_by(`Amazon-Internal Product Category`) %>% summarize(`average_day_change`=mean(day_change, na.rm=T), n()) %>% arrange(average_day_change)
+table1 %>% kable()
+
+```
+
+Finally, I styled a table using `kable` packages
+
 
 
 #### Visualizing
 
 ```{R}
 # your plot 1
+data1 %>% ggplot(aes(x = `Order Quantity`)) + geom_histogram(aes(y = ..density.., 
+    ), bins = 15, color = "black", fill = "light blue") + geom_density(color = "purple") + 
+    xlab("Order Quantity (items)") + scale_x_continuous() + ggtitle("Histogram of Order Quantity") + theme_light()
 ```
 
-Your discussion of plot 1
+This plot is a histogram of Order Quantities from all of the data. You can see which order quantity has the most density. In this case, I buy orders with just 1 item most of the time. 
 
 ```{R}
 # your plot 2
+data3 %>% ggplot(aes(`Amazon-Internal Product Category`))+
+  geom_bar(aes(y=`Order Net Total`,fill=`Amazon-Internal Product Category`), 
+           stat="summary", fun=mean)+
+  theme(axis.text.x = element_text(angle=45, hjust=1), 
+        legend.position="none")
 ```
 
-Your discussion of plot 2
+In this plot, you can see the order net totals for each amazon-internal product category. You can visually see that I spend the most money on the Personal Computers category. The second most bought category is Office Products or Scientific Supplies. 
 
 ```{R}
 # your plot 3
+data3 %>% ggplot(aes(x = `Order Net Total`, y = percent_day_change)) + 
+    geom_point(aes(color = `Order Net Total`)) + geom_smooth(method = "lm") + 
+    xlab("Amazon Order Total ($)") + ylab("Percent Day Change in S&P 500 (%)") + 
+    ggtitle("Percent Day Change in S&P500 vs. Amazon Order Total") + 
+    theme_minimal() + scale_x_continuous(breaks = seq(0, 800, 
+    50)) + scale_y_continuous(breaks = seq(50, 200, 10))
 ```
 
-Your discussion of plot 3
+In this chart, we compared the percent change in the S&P 500 to the amazon order totals. The graph shows that there is basically no correlation between the two variables. I expected to see a positive correlation. In other words, I expected to see higher amazon order totals when the percent day change was higher. However, this was not the case. 
 
 #### Concluding Remarks
 
-If any!
+While I certainly had fun analyzing the data I collected, I was disappointed that there was no correlation to be found. 
 
 
 
